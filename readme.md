@@ -1,7 +1,6 @@
 # 🌐 LinguaLink: AI-Powered Translator
 
-**Tagline:**  
-A multilingual application designed to seamlessly bridge the gap between languages.
+**A multilingual application designed to seamlessly bridge the gap between languages.**
 
 ---
 
