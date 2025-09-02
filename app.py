@@ -67,6 +67,43 @@ def extract_text_from_response(response):
 def clear_text():
     st.session_state.text_input = ""
 
+# JS-based clipboard copy with tooltip
+def copy_to_clipboard(text: str, key: str):
+    js = f"""
+    <div style="position: relative; display:inline-block;">
+        <button id="btn_{key}" style="cursor:pointer;">📋 Copy</button>
+        <span id="tooltip_{key}" style="
+            visibility:hidden;
+            background-color:black;
+            color:#fff;
+            text-align:center;
+            border-radius:5px;
+            padding:3px 6px;
+            position:absolute;
+            z-index:1;
+            bottom:125%;
+            left:50%;
+            transform:translateX(-50%);
+            opacity:0;
+            transition: opacity 0.3s;
+        ">Copied!</span>
+    </div>
+    <script>
+    const btn_{key} = document.getElementById('btn_{key}');
+    const tooltip_{key} = document.getElementById('tooltip_{key}');
+    btn_{key}.onclick = () => {{
+        navigator.clipboard.writeText(`{text}`);
+        tooltip_{key}.style.visibility = 'visible';
+        tooltip_{key}.style.opacity = 1;
+        setTimeout(() => {{
+            tooltip_{key}.style.opacity = 0;
+            tooltip_{key}.style.visibility = 'hidden';
+        }}, 1000);
+    }};
+    </script>
+    """
+    st.markdown(js, unsafe_allow_html=True)
+
 # ----------------- File/Download Helpers -----------------
 def create_docx_bytes(text: str) -> bytes:
     doc = Document()
@@ -83,14 +120,14 @@ def create_pdf_bytes(text: str) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.set_font("Arial", size=12)
     for line in text.split("\n"):
-        pdf.multi_cell(0, 7, line)
-    pdf_bytes = pdf.output(dest='S').encode('latin1')  # Get bytes
+        pdf.multi_cell(0, 7, line.encode('latin-1', 'replace').decode('latin-1'))
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
     return pdf_bytes
 
 # ----------------- Text Translation -----------------
 st.subheader("Text Translation")
 text_input = st.text_area("Enter text", height=150, key="text_input")
-cols = st.columns([1, 1])
+cols = st.columns([4, 1])
 
 with cols[0]:
     if st.button("Translate"):
@@ -112,11 +149,10 @@ with cols[0]:
                 translated = extract_text_from_response(translated_response).strip()
                 st.success("Translated Text:")
 
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.text_area("Translation", value=translated, height=150, key="translated_text_area")
-                with col2:
-                    st.button("📋 Copy", key="copy_text", on_click=lambda t=translated: st.clipboard.copy(t))
+                # Copy button above text area
+                copy_to_clipboard(translated, key="text")
+
+                st.text_area("Translation", value=translated, height=150, key="translated_text_area")
 
                 add_to_history(text_input, translated, src_lang_name, target_lang_name)
 
@@ -159,11 +195,10 @@ if uploaded_file:
                 translated = extract_text_from_response(translated_response).strip()
                 st.success("Translated Document Text:")
 
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.text_area("Translation", value=translated, height=300, key="translated_doc_area")
-                with col2:
-                    st.button("📋 Copy", key="copy_doc", on_click=lambda t=translated: st.clipboard.copy(t))
+                # Copy button above text area
+                copy_to_clipboard(translated, key="doc")
+
+                st.text_area("Translation", value=translated, height=300, key="translated_doc_area")
 
                 # Download options
                 st.download_button("💾 TXT", data=translated, file_name="translation.txt")
